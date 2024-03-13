@@ -40,11 +40,11 @@ endif
 
 CXX_COMPILER_CALL = $(CXX) $(CXXFLAGS) $(CPPFLAGS)
 
-# SOURCE_SUB_DIR := $(shell find $(SOURCE_DIR) -type d)
+SOURCE_SUB_DIR := $(shell find $(SOURCE_DIR) -type d)
 TEST_SUB_DIR := $(shell find $(TEST_DIR) -type d)
 
-CXX_SOURCES := $(foreach dir,$(TEST_SUB_DIR), $(wildcard $(dir)/*.cc))
-CXX_OBJECTS := $(patsubst $(TEST_DIR)/%.cc, $(OBJECT_DIR)/%.o, $(CXX_SOURCES))
+CXX_SOURCES := $(foreach dir,$(SOURCE_SUB_DIR), $(wildcard $(dir)/*.cc)) $(foreach dir,$(TEST_SUB_DIR), $(wildcard $(dir)/*.cc))
+CXX_OBJECTS := $(patsubst $(SOURCE_DIR)/%.cc $(TEST_DIR)/%.cc, $(OBJECT_DIR)/%.o, $(CXX_SOURCES))
 
 ##############
 ## TARGETS  ##
@@ -80,7 +80,7 @@ endif
 # $@: the file name of the target
 # $<: the name of the first dependency
 # $^: the names of all prerequisites
-$(OBJECT_DIR)/%.o: $(TEST_DIR)/%.cc
+$(OBJECT_DIR)/%.o: $(SOURCE_DIR)/%.cc $(TEST_DIR)/%.cc
 	@mkdir -p $(dir $@)
 	$(CXX_COMPILER_CALL) -c $< -o $@
 
