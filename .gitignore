@@ -156,3 +156,4 @@ fabric.properties
 
 ### CC Log ###
 build/
+*.log
