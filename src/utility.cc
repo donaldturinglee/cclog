@@ -16,11 +16,21 @@ std::string Utility::random_string() {
 	return std::to_string(dist(gen));
 }
 
-bool Utility::is_text_in_file(std::string_view text, std::string_view filename) {
+bool Utility::is_text_in_file(std::string_view text, std::string_view filename, std::vector<std::string> const& wanted_tags, std::vector<std::string> const& unwanted_tags) {
 	std::ifstream log_file(filename.data());
 	std::string line;
 	while(getline(log_file, line)) {
 		if(line.find(text) != std::string::npos) {
+			for(auto const& tag : wanted_tags) {
+				if(line.find(tag) == std::string::npos) {
+					return false;
+				}
+			}
+			for(auto const& tag : unwanted_tags) {
+				if(line.find(tag) != std::string::npos) {
+					return false;
+				}
+			}
 			return true;
 		}
 	}
