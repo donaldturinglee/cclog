@@ -38,3 +38,34 @@ TEST("Multiple tags can be used in log") {
 	bool result = Utility::is_text_in_file(message, "cclog.log", {log_level_tag, color_tag, size_tag});
 	CONFIRM_TRUE(result);
 }
+
+TEST("Tags can be streamed to log") {
+	std::string message_base = " 1 type ";
+	std::string message = message_base + Utility::random_string();
+	cclog::log(info) << Count(1) << message;
+
+	std::string count_tag = " count=1 ";
+	bool result = Utility::is_text_in_file(message, "cclog.log", {count_tag});
+	CONFIRM_TRUE(result);
+
+	message_base = " 2 type ";
+	message = message_base + Utility::random_string();
+	cclog::log(info) << Identity(123456789012345) << message;
+	std::string id_tag = " id=123456789012345 ";
+	result = Utility::is_text_in_file(message, "cclog.log", {id_tag});
+	CONFIRM_TRUE(result);
+
+	message_base = " 3 type ";
+	message = message_base + Utility::random_string();
+	cclog::log(info) << Scale(1.5) << message;
+	std::string scale_tag = " scale=1.500000 ";
+	result = Utility::is_text_in_file(message, "cclog.log", {scale_tag});
+	CONFIRM_TRUE(result);
+
+	message_base = " 4 type ";
+	message = message_base + Utility::random_string();
+	cclog::log(info) << cache_miss << message;
+	std::string cache_tag = " cache_hit=false ";
+	result = Utility::is_text_in_file(message, "cclog.log", {cache_tag});
+	CONFIRM_TRUE(result);
+}

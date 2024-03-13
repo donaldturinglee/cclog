@@ -27,34 +27,16 @@ public:
 	virtual std::unique_ptr<Tag> clone() const = 0;
 protected:
 	Tag(std::string const& key, std::string const& value) : key_(key), text_(key + "=\"" + value + "\"") {}
+	Tag(std::string const& key, int value) : key_(key), text_(key + "=" + std::to_string(value)) {}
+	Tag(std::string const& key, long long value) : key_(key), text_(key + "=" + std::to_string(value)) {}
+	Tag(std::string const& key, double value) : key_(key), text_(key + "=" + std::to_string(value)) {}
+	Tag(std::string const& key, bool value) : key_(key), text_(key + "=" + (value ? "true" : "false")) {}
+
 private:
 	std::string key_;
 	std::string const text_;
 };
 
-class LogLevel : public Tag {
-public:
-	LogLevel(std::string const& text) : Tag("log_level", text) {}
-	std::unique_ptr<Tag> clone() const override {
-		return std::unique_ptr<Tag>(new LogLevel(*this));
-	}
-};
-
-class Color : public Tag {
-public:
-	Color(std::string const& text) : Tag("color", text) {}
-	std::unique_ptr<Tag> clone() const override {
-		return std::unique_ptr<Tag>(new Color(*this));
-	}
-};
-
-class Size : public Tag {
-public:
-	Size(std::string const& text) : Tag("size", text) {}
-	std::unique_ptr<Tag> clone() const override {
-		return std::unique_ptr<Tag>(new Size(*this));
-	}
-};
 
 inline std::string to_string(Tag const& tag) {
 	return tag.get_text();
@@ -107,16 +89,79 @@ inline auto log(Tag const& tag1, Tag const& tag2, Tag const& tag3) {
 	return log({&tag1, &tag2, &tag3});
 }
 
+inline std::fstream& operator<<(std::fstream&& fs, Tag const& tag) {
+	fs << to_string(tag);
+	return fs;
+}
+
 } // namespace cclog
 
-inline cclog::LogLevel error("error");
-inline cclog::LogLevel info("info");
-inline cclog::LogLevel debug("debug");
-inline cclog::Color red("red");
-inline cclog::Color green("green");
-inline cclog::Color blue("blue");
-inline cclog::Size small("small");
-inline cclog::Size medium("medium");
-inline cclog::Size large("large");
+class LogLevel : public cclog::Tag {
+public:
+	LogLevel(std::string const& text) : Tag("log_level", text) {}
+	std::unique_ptr<Tag> clone() const override {
+		return std::unique_ptr<Tag>(new LogLevel(*this));
+	}
+};
+
+class Color : public cclog::Tag {
+public:
+	Color(std::string const& text) : Tag("color", text) {}
+	std::unique_ptr<Tag> clone() const override {
+		return std::unique_ptr<Tag>(new Color(*this));
+	}
+};
+
+class Size : public cclog::Tag {
+public:
+	Size(std::string const& text) : Tag("size", text) {}
+	std::unique_ptr<Tag> clone() const override {
+		return std::unique_ptr<Tag>(new Size(*this));
+	}
+};
+
+class Count : public cclog::Tag {
+public:
+	Count(int value) : Tag("count", value) {}
+	std::unique_ptr<Tag> clone() const override {
+		return std::unique_ptr<Tag>(new Count(*this));
+	}
+};
+
+class Identity : public cclog::Tag {
+public:
+	Identity(long long value) : Tag("id", value) {}
+	std::unique_ptr<Tag> clone() const override {
+		return std::unique_ptr<Tag>(new Identity(*this));
+	}
+};
+
+class Scale : public cclog::Tag {
+public:
+	Scale(double value) : Tag("scale", value) {}
+	std::unique_ptr<Tag> clone() const override {
+		return std::unique_ptr<Tag>(new Scale(*this));
+	}
+};
+
+class CacheHit : public cclog::Tag {
+public:
+	CacheHit(bool value) : Tag("cache_hit", value) {}
+	std::unique_ptr<Tag> clone() const override {
+		return std::unique_ptr<Tag>(new CacheHit(*this));
+	}
+};
+
+inline LogLevel error("error");
+inline LogLevel info("info");
+inline LogLevel debug("debug");
+inline Color red("red");
+inline Color green("green");
+inline Color blue("blue");
+inline Size small("small");
+inline Size medium("medium");
+inline Size large("large");
+inline CacheHit cache_hit(true);
+inline CacheHit cache_miss(false);
 
 #endif // CCLOG_H
