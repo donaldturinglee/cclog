@@ -6,8 +6,9 @@ TEST("Simple message can be logged") {
 	std::string message = "simple ";
 	message += Utility::random_string();
 
-	cclog::log(message);
+	cclog::log() << message << " with more text.\n";
 
 	bool result = Utility::is_text_in_file(message, "cclog.log");
+
 	CONFIRM_TRUE(result);
 }
