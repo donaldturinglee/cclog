@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <ostream>
 #include <sstream>
 #include <string>
@@ -16,6 +17,11 @@
 #include <vector>
 
 namespace cclog {
+
+inline std::mutex& get_logging_mutex() {
+	static std::mutex mtx;
+	return mtx;
+}
 
 class Tag {
 public:
@@ -328,6 +334,7 @@ public:
 		if(!proceed_) {
 			return;
 		}
+		const std::lock_guard<std::mutex> lck(get_logging_mutex());
 		auto& outputs = get_outputs();
 		for(auto const& output : outputs) {
 			output->send_line(this->str());
