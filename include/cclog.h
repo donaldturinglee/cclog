@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <chrono>
 #include <ctime>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <map>
@@ -253,17 +254,84 @@ inline void clear_filter_clause(int filter_id) {
 	clauses.erase(filter_id);
 }
 
+class Output {
+public:
+	virtual ~Output() = default;
+	Output(Output const& source) = delete;
+	Output(Output&& source) = delete;
+
+	virtual std::unique_ptr<Output> clone() const = 0;
+	virtual void send_line(std::string const& line) = 0;
+
+	Output& operator=(Output const& rhs) = delete;
+	Output& operator=(Output&& rhs) = delete;
+protected:
+	Output() = default;
+};
+
+inline std::vector<std::unique_ptr<Output>>& get_outputs() {
+	static std::vector<std::unique_ptr<Output>> outputs;
+	return outputs;
+}
+
+inline void add_log_output(Output const& output) {
+	auto& outputs = get_outputs();
+	outputs.push_back(output.clone());
+}
+
+class FileOutput : public Output {
+public:
+	FileOutput(std::string_view path) : path_(path), filename_pattern_("{}"), max_size_(0), rollover_count_(0) {}
+	FileOutput(FileOutput const& source) : path_(source.path_), filename_pattern_(source.filename_pattern_), max_size_(source.max_size_), rollover_count_(source.rollover_count_) {}
+	FileOutput(FileOutput&& source) : path_(source.path_), filename_pattern_(source.filename_pattern_), max_size_(source.max_size_), rollover_count_(source.rollover_count_), file_(std::move(source.file_)) {}
+	~FileOutput() {
+		file_.close();
+	}
+	std::unique_ptr<Output> clone() const override {
+		return std::unique_ptr<Output>(new FileOutput(*this));
+	}
+	void send_line(std::string const& line) override {
+		if(!file_.is_open()) {
+			file_.open("cclog.log", std::ios::app);
+		}
+		file_ << line << '\n';
+		file_.flush();
+	}
+protected:
+	std::filesystem::path path_;
+	std::string filename_pattern_;
+	std::size_t max_size_;
+	unsigned int rollover_count_;
+	std::fstream file_;
+};
+
+class StreamOutput : public Output {
+public:
+	StreamOutput(std::ostream& os) : os_(os) {}
+	StreamOutput(StreamOutput const& source) : os_(source.os_) {}
+	std::unique_ptr<Output> clone() const override {
+		return std::unique_ptr<Output>(new StreamOutput(*this));
+	}
+	void send_line(std::string const& line) override {
+		os_ << line << '\n';
+	}
+protected:
+	std::ostream& os_;
+};
+
 class LogStream : public std::stringstream {
 public:
-	LogStream(std::string const& filename, std::ios_base::openmode mode = ios_base::app) : proceed_(true), fs_(filename, mode) {}
+	LogStream() : proceed_(true) {}
 	LogStream(LogStream const& source) = delete;
-	LogStream(LogStream&& source) : std::stringstream(std::move(source)), proceed_(source.proceed_), fs_(std::move(source.fs_)) {}
+	LogStream(LogStream&& source) : std::stringstream(std::move(source)), proceed_(source.proceed_) {}
 	~LogStream() {
 		if(!proceed_) {
 			return;
 		}
-		fs_ << this->str();
-		fs_ << '\n';
+		auto& outputs = get_outputs();
+		for(auto const& output : outputs) {
+			output->send_line(this->str());
+		}
 	}
 
 	LogStream& operator=(LogStream const& rhs) = delete;
@@ -282,7 +350,7 @@ inline LogStream log(std::vector<Tag const*> tags = {}) {
 	std::time_t const start_time = std::chrono::system_clock::to_time_t(time);
 	auto const ms = duration_cast<std::chrono::milliseconds>(time.time_since_epoch()) % 1000;
 
-	LogStream ls("cclog.log");
+	LogStream ls;
 	ls << std::put_time(std::gmtime(&start_time), "%Y-%m-%dT%H:%M:%S.")
 		<< std::setw(3) << std::setfill('0') << std::to_string(ms.count());
 	
